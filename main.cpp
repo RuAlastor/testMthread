@@ -8,12 +8,16 @@
 
 //------------------------------------------
 
+// Number of threads
 static const int THREAD_NUM  = 200;
+// Max size of queue when it refuses to add more msgs
 static const int BUFFER_SIZE = 200;
+// Amount of msgs to push into the queue
 static const int MSG_NUM     = 5;
 
 //------------------------------------------
 
+/*
 class Locker {
 
 public:
@@ -28,9 +32,11 @@ private:
     pthread_mutex_t& _mutex;
 
 };
+*/
 
 //------------------------------------------
 
+// Multithread safe queue
 class MultithreadQueue {
 
 public:
@@ -55,13 +61,14 @@ public:
     }
 
     size_t size() { return _msg_queue.size(); }
+    // Tells threads that queue is stopped working and they need to be shut down
     void finish() {
         _isFinished = true;
 
         pthread_cond_broadcast( &_cond );
         pthread_cond_broadcast( &_cond_overflow );
     }
-
+    // Pushed new msg into the queue
     int addMsg( std::string inputMsg ) {
         pthread_mutex_lock( &_mutex );
 
@@ -81,6 +88,7 @@ public:
         pthread_mutex_unlock( &_mutex );
         return 0;
     }
+    // Pops msg from the queue
     std::string getMsg() {
         pthread_mutex_lock( &_mutex );
 
@@ -130,9 +138,11 @@ private:
 private:
     bool            _isFinished;
 
+    // Normal mutex to control mthreads
     pthread_mutex_t _mutex;
     pthread_cond_t  _cond;
 
+    // Mutex to contorl queue "overflow" ( when ( size of queue > BUFFER_SIZE ) )
     pthread_mutex_t _mutex_overflow;
     pthread_cond_t  _cond_overflow;
 
@@ -163,10 +173,12 @@ void* printMsgs( void* rawData ) {
 int main()
 {
     pthread_t printingThreads[THREAD_NUM];
+
     int i = 0;
     for ( i = 0; i < THREAD_NUM; ++i ) {
         pthread_create( &printingThreads[i], nullptr, printMsgs, reinterpret_cast< void* >( const_cast< char* >( std::to_string( i ).c_str() ) ) );
-        //usleep( 5000 );
+        usleep( 5000 ); // Need this to see correct numbers of threads. Line is safe to be commented
+
         //pthread_detach( printingThreads[i] );
         //std::cout << "Thread " << i << " started!\n";
     }
